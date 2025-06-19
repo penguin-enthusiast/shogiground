@@ -128,6 +128,10 @@ export interface Config {
       cancel?: () => void; // called after user cancels the selection
     };
   };
+  pieceCooldown?: {
+    enabled?: boolean;
+    cooldownTime?: number; // cooldown in milliseconds
+  };
 }
 
 export function applyAnimation(state: HeadlessState, config: Config): void {

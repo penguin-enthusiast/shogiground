@@ -127,6 +127,10 @@ export interface HeadlessState {
     insert?: (boardElements?: sg.BoardElements, handElements?: sg.HandElements) => void; // when the board or hands DOM has been (re)inserted
   };
   drawable: Drawable;
+  pieceCooldown?: {
+    enabled?: boolean;
+    cooldownTime?: number; // cooldown in milliseconds
+  };
 }
 export interface State extends HeadlessState {
   dom: sg.Dom;
@@ -190,6 +194,9 @@ export function defaults(): HeadlessState {
       autoShapes: [],
       squares: [],
       prevSvgHash: '',
+    },
+    pieceCooldown: {
+      enabled: false,
     },
   };
 }

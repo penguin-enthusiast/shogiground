@@ -1,7 +1,8 @@
-import type { HeadlessState } from './state.js';
+import type { HeadlessState, State } from './state.js';
 import type * as sg from './types.js';
 import { callUserFunction, opposite, pieceNameOf, samePiece } from './util.js';
 import { addToHand, removeFromHand } from './hands.js';
+import { renderSquareTimer } from "./render.js";
 
 export function toggleOrientation(state: HeadlessState): void {
   state.orientation = opposite(state.orientation);
@@ -71,7 +72,7 @@ export function unsetPredrop(state: HeadlessState): void {
 }
 
 export function baseMove(
-  state: HeadlessState,
+  state: State,
   orig: sg.Key,
   dest: sg.Key,
   prom: boolean,
@@ -87,13 +88,17 @@ export function baseMove(
   state.lastDests = [orig, dest];
   state.lastPiece = undefined;
   state.checks = undefined;
+  if (isPieceCooldownEnabled(state)) {
+    (promPiece || origPiece).lastMoved = Date.now();
+    renderSquareTimer(dest, state);
+  }
   callUserFunction(state.events.move, orig, dest, prom, captured);
   callUserFunction(state.events.change);
   return captured || true;
 }
 
 export function baseDrop(
-  state: HeadlessState,
+  state: State,
   piece: sg.Piece,
   key: sg.Key,
   prom: boolean,
@@ -114,13 +119,17 @@ export function baseDrop(
   state.lastPiece = piece;
   state.checks = undefined;
   if (!state.droppable.spare) removeFromHand(state, piece);
+  if (isPieceCooldownEnabled(state)) {
+    piece.lastMoved = Date.now();
+    renderSquareTimer(key, state);
+  }
   callUserFunction(state.events.drop, piece, key, prom);
   callUserFunction(state.events.change);
   return true;
 }
 
 function baseUserMove(
-  state: HeadlessState,
+  state: State,
   orig: sg.Key,
   dest: sg.Key,
   prom: boolean,
@@ -135,7 +144,7 @@ function baseUserMove(
   return result;
 }
 
-function baseUserDrop(state: HeadlessState, piece: sg.Piece, key: sg.Key, prom: boolean): boolean {
+function baseUserDrop(state: State, piece: sg.Piece, key: sg.Key, prom: boolean): boolean {
   const result = baseDrop(state, piece, key, prom);
   if (result) {
     state.movable.dests = undefined;
@@ -147,7 +156,7 @@ function baseUserDrop(state: HeadlessState, piece: sg.Piece, key: sg.Key, prom: 
 }
 
 export function userDrop(
-  state: HeadlessState,
+  state: State,
   piece: sg.Piece,
   key: sg.Key,
   prom?: boolean,
@@ -170,7 +179,7 @@ export function userDrop(
 }
 
 export function userMove(
-  state: HeadlessState,
+  state: State,
   orig: sg.Key,
   dest: sg.Key,
   prom?: boolean,
@@ -233,7 +242,7 @@ export function promotionDialogMove(state: HeadlessState, orig: sg.Key, dest: sg
 
 function promotePiece(s: HeadlessState, piece: sg.Piece): sg.Piece | undefined {
   const promRole = s.promotion.promotesTo(piece.role);
-  return promRole !== undefined ? { color: piece.color, role: promRole } : undefined;
+  return promRole !== undefined ? { color: piece.color, role: promRole, lastMoved: piece.lastMoved } : undefined;
 }
 
 export function deletePiece(state: HeadlessState, key: sg.Key): void {
@@ -241,7 +250,7 @@ export function deletePiece(state: HeadlessState, key: sg.Key): void {
 }
 
 export function selectSquare(
-  state: HeadlessState,
+  state: State,
   key: sg.Key,
   prom?: boolean,
   force?: boolean,
@@ -269,6 +278,12 @@ export function selectSquare(
     (state.selectable.enabled || state.draggable.enabled || force) &&
     (isMovable(state, key) || isPremovable(state, key))
   ) {
+    if (isPieceCooldownEnabled(state)) {
+      const piece = state.pieces.get(key);
+      if (piece && isPieceOnCooldown(state, piece)) {
+        return;
+      }
+    }
     setSelected(state, key);
   }
 }
@@ -430,7 +445,7 @@ export function isDraggable(state: HeadlessState, piece: sg.Piece): boolean {
   );
 }
 
-export function playPremove(state: HeadlessState): boolean {
+export function playPremove(state: State): boolean {
   const move = state.premovable.current;
   if (!move) return false;
   const orig = move.orig,
@@ -450,7 +465,7 @@ export function playPremove(state: HeadlessState): boolean {
   return success;
 }
 
-export function playPredrop(state: HeadlessState): boolean {
+export function playPredrop(state: State): boolean {
   const drop = state.predroppable.current;
   if (!drop) return false;
   const piece = drop.piece,
@@ -492,4 +507,16 @@ export function stop(state: HeadlessState): void {
     state.hovered =
       undefined;
   cancelMoveOrDrop(state);
+}
+
+export function isPieceCooldownEnabled(state: HeadlessState): boolean {
+  return !!(state.pieceCooldown && state.pieceCooldown.cooldownTime && state.pieceCooldown.enabled);
+}
+
+export function isPieceOnCooldown(state: HeadlessState, piece: sg.Piece): boolean {
+  if (state.pieceCooldown && state.pieceCooldown.cooldownTime && !!state.pieceCooldown.enabled && piece.lastMoved) {
+    const now = Date.now();
+    return piece.lastMoved + state.pieceCooldown.cooldownTime > now;
+  }
+  return false;
 }

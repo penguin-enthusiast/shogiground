@@ -11,7 +11,7 @@ import {
   pieceNameOf,
   sentePov,
   isPieceNode,
-  isSquareNode,
+  isSquareNode, getSqElAtKey,
 } from './util.js';
 
 type SquareClasses = Map<sg.Key, string>;
@@ -289,4 +289,25 @@ function renderPromotion(s: State, promotionEl: HTMLElement): void {
 
 function promotionHash(active: boolean, key: sg.Key | undefined, pieces: sg.Piece[]): string {
   return [active, key, pieces.map((p) => pieceNameOf(p)).join(' ')].join(' ');
+}
+
+export function renderSquareTimer(key: sg.Key, state: State): void {
+  const sqEl = getSqElAtKey(key, state);
+  if (!sqEl) return;
+  removeActiveTimer(sqEl);
+  const timerComponent = createEl("div", "timer");
+  timerComponent.addEventListener("animationend", () => {
+    timerComponent.remove();
+  });
+  sqEl.appendChild(timerComponent);
+}
+
+function removeActiveTimer(sqEl: sg.KeyedNode): void {
+  const children = Array.from(sqEl.childNodes);
+  for (const node of children) {
+    if ((node as HTMLElement).className === "timer") {
+      sqEl.removeChild(node);
+      return;
+    }
+  }
 }

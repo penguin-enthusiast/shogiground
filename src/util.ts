@@ -1,5 +1,6 @@
 import type * as sg from './types.js';
 import { allKeys, colors } from './constants.js';
+import type { State } from './state.js';
 
 export const pos2key = (pos: sg.Pos): sg.Key => allKeys[pos[0] + 16 * pos[1]];
 
@@ -165,6 +166,22 @@ export function getKeyAtDomPos(
   return file >= 0 && file < dims.files && rank >= 0 && rank < dims.ranks
     ? pos2key([file, rank])
     : undefined;
+}
+
+export function getSqElAtKey(key: sg.Key, state: State): sg.KeyedNode | undefined {
+  const boardEls = state.dom.elements.board;
+  if (boardEls) {
+    const squaresEl: HTMLElement = boardEls.squares;
+
+    let sqEl = squaresEl.firstElementChild as HTMLElement | undefined;
+    while (sqEl && isSquareNode(sqEl)) {
+      if (sqEl.sgKey === key) {
+        return sqEl;
+      }
+      sqEl = sqEl.nextElementSibling as HTMLElement | undefined;
+    }
+  }
+  return undefined;
 }
 
 export function getHandPieceAtDomPos(

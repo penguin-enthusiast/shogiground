@@ -13,6 +13,7 @@ export type RoleString = string;
 export interface Piece {
   role: RoleString;
   color: Color;
+  lastMoved?: number;
 }
 export type PieceName = `${Color} ${RoleString}`;
 export type Pieces = Map<Key, Piece>;
