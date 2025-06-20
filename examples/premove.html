@@ -1,0 +1,166 @@
+<!doctype html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <link rel="stylesheet" href="assets/css/base.css" />
+    <link rel="stylesheet" href="assets/css/shogiground.css" />
+    <link rel="stylesheet" href="assets/css/hands.css" />
+    <link rel="stylesheet" href="assets/css/themes/wood-grid.css" />
+    <link rel="stylesheet" href="assets/css/pieces/ryoko.css" />
+  </head>
+
+  <body>
+    <div class="main">
+      <nav>
+        <a href="index.html">Basic Board</a>
+        <a href="hands.html">Board - hands</a>
+        <a href="minis.html">Mini Boards</a>
+        <a href="d5x5.html">Small Board (5x5)</a>
+        <a href="d12x12.html">Big Board (12x12)</a>
+        <a href="d9x10.html">Rectangular board (9x10)</a>
+      </nav>
+      <div class="wrap" style="display: flex">
+        <div id="hand-top" class="sg-hand-wrap"></div>
+        <div style="width: 500px; height: calc(500px / 11 * 12)" id="main-wrap" class="main-board">
+          <div id="dirty" class="sg-wrap"></div>
+        </div>
+        <div id="hand-bottom" class="sg-hand-wrap"></div>
+      </div>
+    </div>
+    <button onclick="flip()">flip</button>
+    <button onclick="drop()">drop</button>
+    <button onclick="sp()">sp</button>
+    <button onclick="sq()">sq</button>
+    <div class="slidecontainer">
+      <input type="range" min="1" max="100" value="50" class="slider" id="myRange" />
+    </div>
+    <script src="../dist/shogiground.js"></script>
+    <script>
+      const sg = Shogiground();
+      const config = {
+        sfen: {
+          board: 'lnsgkg1nl/1r5s1/pppppp2p/6p2/9/2P6/PP1PPPP1P/7R1/LNSGKGSNL',
+          hands: 'B2r',
+        },
+        check: true,
+        activeColor: 'both',
+        orientation: 'sente',
+        draggable: {
+          enabled: true,
+          deleteOnDropOff: false,
+          addToHandOnDropOff: false,
+        },
+        selectable: {
+          enabled: true,
+          addSparesToHand: false,
+        },
+        movable: {
+          free: false,
+          dests: new Map([['2h', ['2h', '2b']]]),
+        },
+        droppable: {
+          free: false,
+          dests: new Map([['sente bishop', ['5e']]]),
+        },
+        drawable: {
+          forced: false,
+        },
+        promotion: {
+          promotesTo: (role) => {
+            if (role === 'bishop') return 'horse';
+            if (role === 'pawn') return 'tokin';
+            if (role === 'knight') return 'promotedKnight';
+            if (role === 'silver') return 'promotedSilver';
+            if (role === 'rook') return 'dragon';
+            if (role === 'lance') return 'promotedLance';
+          },
+          movePromotionDialog: (orig, dest) => {
+            return orig === '2h' && dest === '2b';
+          },
+
+        },
+        events: {
+          select: (s) => {
+            console.log('SELECT', s, sg.state.selected);
+          },
+          move: (a, b) => {
+            console.log('MOVE', a, b);
+            sg.set({
+              movable: {
+                free: false,
+                dests: new Map([['8b', ['8b', '2b']], ['2b', ['2b', '2h']]]),
+              },
+            })
+          },
+          pieceUnselect: (p) => {
+            console.log('pieceUnselect', p);
+          },
+          unselect: (s) => {
+            console.log('unselect', s);
+          },
+          drop: (p, k) => {
+            sg.set({
+              movable: {
+                free: false,
+                dests: new Map([['5e', ['5e', '8h']]]),
+              },
+            })
+          }
+        },
+        pieceCooldown: {
+          enabled: true,
+          cooldownTime: 5000,
+        },
+      };
+      console.log(
+        'STATUS:',
+        ' drag:',
+        config.draggable.enabled,
+        ' select: ',
+        config.selectable.enabled,
+      );
+      sg.set(config);
+      sg.attach({
+        board: document.getElementById('dirty'),
+      });
+      sg.attach({
+        hands: {
+          bottom: document.getElementById('hand-bottom'),
+        },
+      });
+      sg.attach({
+        hands: {
+          top: document.getElementById('hand-top'),
+        },
+      });
+      // sg.selectSquare('3g');
+      function flip() {
+        sg.toggleOrientation();
+      }
+      function drop() {
+        sg.set({
+          sfen: {
+            board: 'lnsgkg1nl/1r5s1/pppppp1pp/6p2/5B3/2P6/PP1PPPPPP/7R1/LNSGKGSNL w b 6',
+            hands: 'b',
+          },
+        });
+      }
+      function sp() {
+        sg.selectPiece({ role: 'pawn', color: 'sente' }, true);
+      }
+      function sq() {
+        sg.selectSquare('5e');
+      }
+    </script>
+    <script>
+      const slider = document.getElementById('myRange');
+      const board = document.getElementById('main-wrap');
+      // Update the current slider value (each time you drag the slider handle)
+      slider.oninput = function () {
+        board.style.width = (450 + parseInt(this.value)).toString() + 'px';
+        board.style.height = 'calc(' + (450 + parseInt(this.value)).toString() + 'px/ 11 * 12)';
+        //document.dispatchEvent(new Event('shogiground.resize'));
+      };
+    </script>
+  </body>
+</html>
